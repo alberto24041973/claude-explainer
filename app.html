@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Explainer</title>
+    <style>
+        :root {
+            --bg: #f5f7fa;
+            --bg-card: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #555;
+            --border: #e0e4ea;
+            --accent: #4a6cf7;
+            --accent-hover: #3b5de7;
+            --accent-light: #eef1ff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --radius: 12px;
+            --step1: #4a6cf7;
+            --step2: #f59e0b;
+            --step3: #10b981;
+            --step4: #8b5cf6;
+            --step5: #ef4444;
+            --footer-bg: #e8ebf0;
+            --input-bg: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg: #0f1117;
+            --bg-card: #1a1d2e;
+            --text: #e4e6f0;
+            --text-secondary: #9ca3af;
+            --border: #2a2d3e;
+            --accent: #6b8aff;
+            --accent-hover: #5a78f0;
+            --accent-light: #1e2340;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --footer-bg: #141621;
+            --input-bg: #232639;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; width: 100%; }
+
+        /* Header */
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .header-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.4rem; font-weight: 700; }
+        header h1 span { color: var(--accent); }
+        .theme-toggle {
+            background: var(--accent-light);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover { background: var(--accent); color: #fff; }
+
+        /* Main */
+        main { flex: 1; padding: 30px 0; }
+        .intro {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Form */
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        textarea, select, input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text);
+            transition: border 0.2s;
+            outline: none;
+        }
+        textarea { resize: vertical; min-height: 120px; }
+        textarea:focus, select:focus, input:focus {
+            border-color: var(--accent);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+        .btn-analyze {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-analyze:hover { background: var(--accent-hover); }
+        .btn-analyze:active { transform: scale(0.98); }
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Spinner */
+        .spinner-overlay {
+            display: none;
+            text-align: center;
+            padding: 40px 0;
+        }
+        .spinner-overlay.visible { display: block; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner-text { color: var(--text-secondary); font-size: 0.9rem; }
+
+        /* Error */
+        .error-box {
+            display: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        [data-theme="dark"] .error-box {
+            background: #2d1618;
+            border-color: #5c2223;
+            color: #fca5a5;
+        }
+        .error-box.visible { display: block; }
+
+        /* Steps */
+        .results { display: none; }
+        .results.visible { display: block; }
+        .step-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .step-header {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+            gap: 12px;
+        }
+        .step-header:hover { background: var(--accent-light); }
+        .step-number {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .step-card:nth-child(1) .step-number { background: var(--step1); }
+        .step-card:nth-child(2) .step-number { background: var(--step2); }
+        .step-card:nth-child(3) .step-number { background: var(--step3); }
+        .step-card:nth-child(4) .step-number { background: var(--step4); }
+        .step-card:nth-child(5) .step-number { background: var(--step5); }
+        .step-title { font-weight: 600; font-size: 1rem; flex: 1; }
+        .step-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: none;
+        }
+        @media (min-width: 601px) {
+            .step-desc { display: block; }
+        }
+        .step-chevron {
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .step-card.open .step-chevron { transform: rotate(90deg); }
+        .step-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .step-card.open .step-body { max-height: 2000px; }
+        .step-content {
+            padding: 0 20px 20px;
+            font-size: 0.93rem;
+            line-height: 1.7;
+        }
+
+        /* Token chips */
+        .token-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .token-chip {
+            background: var(--accent-light);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .token-count {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        /* Structure */
+        .struct-section { margin-bottom: 12px; }
+        .struct-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        .struct-value { font-size: 0.9rem; }
+        .struct-tag {
+            display: inline-block;
+            background: var(--accent-light);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            margin: 2px 4px 2px 0;
+        }
+
+        /* Entities */
+        .entity-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .entity-table th, .entity-table td {
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .entity-table th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        .entity-empty { color: var(--text-secondary); font-style: italic; }
+
+        /* Reasoning */
+        .reasoning-list { list-style: none; counter-reset: step; }
+        .reasoning-list li {
+            position: relative;
+            padding: 10px 0 10px 36px;
+            border-bottom: 1px solid var(--border);
+        }
+        .reasoning-list li:last-child { border-bottom: none; }
+        .reasoning-list li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 24px; height: 24px;
+            background: var(--step4);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Final output */
+        .final-output {
+            background: var(--accent-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            white-space: pre-wrap;
+            font-size: 0.93rem;
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--footer-bg);
+            border-top: 1px solid var(--border);
+            padding: 24px 0;
+            margin-top: auto;
+        }
+        .footer-content {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        .footer-content strong { color: var(--text); }
+        .footer-content ul {
+            list-style: disc;
+            padding-left: 20px;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container header-inner">
+        <h1><span>AI</span> Prompt Explainer</h1>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambia tema">&#9790;</button>
+    </div>
+</header>
+
+<main>
+    <div class="container">
+        <p class="intro">
+            Inserisci un prompt per scoprire come un modello di intelligenza artificiale lo analizza ed elabora una risposta.<br>
+            I passaggi mostrati sono una <strong>ricostruzione didattica semplificata</strong>.
+        </p>
+
+        <div class="form-card">
+            <div class="form-group">
+                <label for="prompt">Il tuo prompt</label>
+                <textarea id="prompt" placeholder="Scrivi qui il tuo prompt, ad esempio: &quot;Scrivi una email formale per chiedere un appuntamento con il dott. Rossi il 15 marzo 2025&quot;"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="provider">Provider AI</label>
+                    <select id="provider">
+                        <option value="openai">OpenAI (GPT)</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="apikey">API Key</label>
+                    <input type="password" id="apikey" placeholder="sk-... oppure sk-ant-...">
+                </div>
+            </div>
+            <button class="btn-analyze" id="btnAnalyze" onclick="analyze()">Analizza il prompt</button>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <div class="spinner-overlay" id="spinner">
+            <div class="spinner"></div>
+            <div class="spinner-text">Analisi in corso... il modello sta elaborando il tuo prompt.</div>
+        </div>
+
+        <div class="results" id="results">
+            <!-- Step 1: Tokenizzazione -->
+            <div class="step-card open">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-number">1</div>
+                    <div>
+                        <div class="step-title">Tokenizzazione</div>
+                        <div class="step-desc">Il testo viene suddiviso in unità minime chiamate "token"</div>
+                    </div>
+                    <div class="step-chevron">&#9654;</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-content" id="tokensContent"></div>
+                </div>
+            </div>
+            <!-- Step 2: Struttura -->
+            <div class="step-card open">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-number">2</div>
+                    <div>
+                        <div class="step-title">Analisi della struttura</div>
+                        <div class="step-desc">Il modello identifica istruzioni, contesto e vincoli</div>
+                    </div>
+                    <div class="step-chevron">&#9654;</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-content" id="structureContent"></div>
+                </div>
+            </div>
+            <!-- Step 3: Entità -->
+            <div class="step-card open">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-number">3</div>
+                    <div>
+                        <div class="step-title">Entità rilevate</div>
+                        <div class="step-desc">Nomi, date, email e altri dati specifici nel testo</div>
+                    </div>
+                    <div class="step-chevron">&#9654;</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-content" id="entitiesContent"></div>
+                </div>
+            </div>
+            <!-- Step 4: Ragionamento -->
+            <div class="step-card open">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-number">4</div>
+                    <div>
+                        <div class="step-title">Ragionamento del modello</div>
+                        <div class="step-desc">Una ricostruzione semplificata dei passaggi logici</div>
+                    </div>
+                    <div class="step-chevron">&#9654;</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-content" id="reasoningContent"></div>
+                </div>
+            </div>
+            <!-- Step 5: Output -->
+            <div class="step-card open">
+                <div class="step-header" onclick="toggleStep(this)">
+                    <div class="step-number">5</div>
+                    <div>
+                        <div class="step-title">Risposta finale</div>
+                        <div class="step-desc">L'output generato dal modello AI</div>
+                    </div>
+                    <div class="step-chevron">&#9654;</div>
+                </div>
+                <div class="step-body">
+                    <div class="step-content" id="outputContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <div class="footer-content">
+            <strong>Note su privacy e utilizzo</strong>
+            <ul>
+                <li>I prompt inseriti possono contenere dati personali: evita di inviare dati sensibili in ambienti demo o non protetti.</li>
+                <li>Questo sistema ha finalità esclusivamente <strong>didattiche e divulgative</strong>.</li>
+                <li>I passaggi mostrati (tokenizzazione, ragionamento, ecc.) sono una <strong>ricostruzione esplicativa semplificata</strong> del funzionamento di un modello AI, non una rappresentazione tecnica interna completa.</li>
+                <li>Le API key inserite vengono utilizzate solo per la chiamata al modello e non vengono memorizzate dal sistema.</li>
+            </ul>
+        </div>
+    </div>
+</footer>
+
+<script>
+const BACKEND_URL = "http://localhost:8000";
+
+function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute("data-theme") === "dark";
+    html.setAttribute("data-theme", isDark ? "light" : "dark");
+    document.querySelector(".theme-toggle").textContent = isDark ? "\u263E" : "\u2600";
+    localStorage.setItem("theme", isDark ? "light" : "dark");
+}
+
+(function initTheme() {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.querySelector(".theme-toggle").textContent = "\u2600";
+    }
+})();
+
+function toggleStep(header) {
+    header.closest(".step-card").classList.toggle("open");
+}
+
+function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.textContent = msg;
+    box.classList.add("visible");
+}
+
+function hideError() {
+    document.getElementById("errorBox").classList.remove("visible");
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function analyze() {
+    const prompt = document.getElementById("prompt").value.trim();
+    const provider = document.getElementById("provider").value;
+    const apiKey = document.getElementById("apikey").value.trim();
+
+    hideError();
+    document.getElementById("results").classList.remove("visible");
+
+    if (!prompt) { showError("Inserisci un prompt prima di procedere."); return; }
+    if (!apiKey) { showError("Inserisci la tua API key per il provider selezionato."); return; }
+
+    const btn = document.getElementById("btnAnalyze");
+    const spinner = document.getElementById("spinner");
+    btn.disabled = true;
+    spinner.classList.add("visible");
+
+    try {
+        const resp = await fetch(BACKEND_URL + "/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, provider, api_key: apiKey }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: "Errore sconosciuto" }));
+            throw new Error(err.detail || `Errore ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        renderResults(data);
+
+    } catch (e) {
+        if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+            showError("Impossibile raggiungere il backend. Assicurati che sia in esecuzione su " + BACKEND_URL);
+        } else {
+            showError(e.message);
+        }
+    } finally {
+        btn.disabled = false;
+        spinner.classList.remove("visible");
+    }
+}
+
+function renderResults(data) {
+    // Tokens
+    const tokensHtml = `
+        <p class="token-count">Il tuo prompt è stato suddiviso in <strong>${data.tokens.length} token</strong>.
+        Ogni parola, numero o segno di punteggiatura diventa un'unità che il modello elabora separatamente.</p>
+        <div class="token-list">
+            ${data.tokens.map(t => `<span class="token-chip">${escapeHtml(t)}</span>`).join("")}
+        </div>`;
+    document.getElementById("tokensContent").innerHTML = tokensHtml;
+
+    // Structure
+    let structHtml = "<p style='margin-bottom:12px'>Il modello analizza la struttura del prompt per capire cosa gli viene chiesto, in quale contesto e con quali vincoli.</p>";
+    const labels = {
+        istruzioni_rilevate: "Istruzioni rilevate",
+        contesto: "Contesto",
+        stile_e_formato: "Stile e formato",
+        vincoli: "Vincoli",
+    };
+    for (const [key, label] of Object.entries(labels)) {
+        const values = data.structure[key] || [];
+        structHtml += `<div class="struct-section">
+            <div class="struct-label">${label}</div>
+            <div class="struct-value">${values.map(v => `<span class="struct-tag">${escapeHtml(v)}</span>`).join("")}</div>
+        </div>`;
+    }
+    document.getElementById("structureContent").innerHTML = structHtml;
+
+    // Entities
+    let entHtml = "<p style='margin-bottom:12px'>Il modello identifica elementi specifici nel testo: nomi, date, indirizzi email, numeri e altri dati rilevanti.</p>";
+    if (data.entities.length === 0) {
+        entHtml += `<p class="entity-empty">Nessuna entità specifica rilevata nel prompt.</p>`;
+    } else {
+        entHtml += `<table class="entity-table"><thead><tr><th>Tipo</th><th>Valore</th></tr></thead><tbody>`;
+        for (const e of data.entities) {
+            entHtml += `<tr><td>${escapeHtml(e.tipo)}</td><td>${escapeHtml(e.valore)}</td></tr>`;
+        }
+        entHtml += `</tbody></table>`;
+    }
+    document.getElementById("entitiesContent").innerHTML = entHtml;
+
+    // Reasoning
+    let reasonHtml = `<p style='margin-bottom:12px'>Ecco una ricostruzione semplificata di come il modello potrebbe aver elaborato la risposta.
+    <em>Nota: questi passaggi sono una spiegazione didattica, non il ragionamento interno reale del modello.</em></p>`;
+    reasonHtml += `<ol class="reasoning-list">`;
+    for (const step of data.reasoning_steps) {
+        reasonHtml += `<li>${escapeHtml(step)}</li>`;
+    }
+    reasonHtml += `</ol>`;
+    document.getElementById("reasoningContent").innerHTML = reasonHtml;
+
+    // Final output
+    let outHtml = `<p style='margin-bottom:12px'>Questa è la risposta generata dal modello AI per il tuo prompt.</p>`;
+    outHtml += `<div class="final-output">${escapeHtml(data.final_output)}</div>`;
+    document.getElementById("outputContent").innerHTML = outHtml;
+
+    // Show results and scroll
+    const results = document.getElementById("results");
+    results.classList.add("visible");
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Enter key submits
+document.getElementById("prompt").addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && e.ctrlKey) {
+        analyze();
+    }
+});
+</script>
+
+</body>
+</html>
