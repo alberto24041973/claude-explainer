@@ -385,12 +385,13 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="provider">Provider AI</label>
-                    <select id="provider">
+                    <select id="provider" onchange="onProviderChange()">
+                        <option value="demo">Demo (senza API key)</option>
                         <option value="openai">OpenAI (GPT)</option>
                         <option value="anthropic">Anthropic (Claude)</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="apikeyGroup">
                     <label for="apikey">API Key</label>
                     <input type="password" id="apikey" placeholder="sk-... oppure sk-ant-...">
                 </div>
@@ -495,7 +496,8 @@
 </footer>
 
 <script>
-const BACKEND_URL = "http://localhost:8000";
+// URL relativo: funziona sia servito dal backend sia aperto come file locale
+const BACKEND_URL = window.location.protocol === "file:" ? "http://localhost:8000" : "";
 
 function toggleTheme() {
     const html = document.documentElement;
@@ -542,7 +544,7 @@ async function analyze() {
     document.getElementById("results").classList.remove("visible");
 
     if (!prompt) { showError("Inserisci un prompt prima di procedere."); return; }
-    if (!apiKey) { showError("Inserisci la tua API key per il provider selezionato."); return; }
+    if (provider !== "demo" && !apiKey) { showError("Inserisci la tua API key per il provider selezionato."); return; }
 
     const btn = document.getElementById("btnAnalyze");
     const spinner = document.getElementById("spinner");
@@ -636,6 +638,13 @@ function renderResults(data) {
     results.classList.add("visible");
     results.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+function onProviderChange() {
+    const provider = document.getElementById("provider").value;
+    const apikeyGroup = document.getElementById("apikeyGroup");
+    apikeyGroup.style.display = provider === "demo" ? "none" : "block";
+}
+onProviderChange();
 
 // Enter key submits
 document.getElementById("prompt").addEventListener("keydown", function(e) {

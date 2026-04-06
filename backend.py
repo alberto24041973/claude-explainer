@@ -9,8 +9,11 @@ import re
 import os
 from typing import Optional
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="AI Prompt Explainer")
@@ -22,11 +25,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BASE_DIR = Path(__file__).resolve().parent
+
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    """Serve app.html direttamente dal backend."""
+    html_path = BASE_DIR / "app.html"
+    return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
 
 class AnalyzeRequest(BaseModel):
     prompt: str
-    provider: str  # "openai" o "anthropic"
-    api_key: str
+    provider: str  # "openai", "anthropic" o "demo"
+    api_key: str = ""
 
 
 class AnalyzeResponse(BaseModel):
@@ -163,23 +175,30 @@ async def call_openai(prompt: str, api_key: str) -> dict:
     """Chiama l'API OpenAI."""
     import httpx
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"Analizza questo prompt:\n\n{prompt}"},
-                ],
-                "temperature": 0.7,
-                "max_tokens": 2000,
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": f"Analizza questo prompt:\n\n{prompt}"},
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                },
+            )
+    except httpx.ConnectError as e:
+        raise HTTPException(status_code=502, detail="Impossibile raggiungere l'API OpenAI. Verifica la connessione di rete.")
+    except httpx.ProxyError as e:
+        raise HTTPException(status_code=502, detail="Connessione bloccata dal proxy. Prova la modalità Demo oppure esegui l'app in locale.")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout nella chiamata a OpenAI. Riprova.")
 
     if response.status_code != 200:
         detail = response.text
@@ -194,23 +213,30 @@ async def call_anthropic(prompt: str, api_key: str) -> dict:
     """Chiama l'API Anthropic (Claude)."""
     import httpx
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 2000,
-                "system": SYSTEM_PROMPT,
-                "messages": [
-                    {"role": "user", "content": f"Analizza questo prompt:\n\n{prompt}"},
-                ],
-            },
-        )
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 2000,
+                    "system": SYSTEM_PROMPT,
+                    "messages": [
+                        {"role": "user", "content": f"Analizza questo prompt:\n\n{prompt}"},
+                    ],
+                },
+            )
+    except httpx.ConnectError as e:
+        raise HTTPException(status_code=502, detail="Impossibile raggiungere l'API Anthropic. Verifica la connessione di rete.")
+    except httpx.ProxyError as e:
+        raise HTTPException(status_code=502, detail="Connessione bloccata dal proxy. Prova la modalità Demo oppure esegui l'app in locale.")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout nella chiamata ad Anthropic. Riprova.")
 
     if response.status_code != 200:
         detail = response.text
@@ -219,6 +245,34 @@ async def call_anthropic(prompt: str, api_key: str) -> dict:
     data = response.json()
     content = data["content"][0]["text"]
     return parse_ai_response(content)
+
+
+def generate_demo_response(prompt: str) -> dict:
+    """Genera una risposta demo senza chiamare API esterne."""
+    text_lower = prompt.lower()
+
+    # Genera reasoning steps contestuali
+    steps = [
+        f"Passaggio 1: Il modello riceve il prompt composto da {len(prompt.split())} parole e lo analizza per capire cosa viene chiesto.",
+    ]
+
+    if any(w in text_lower for w in ["scrivi", "genera", "crea", "write", "create", "generate"]):
+        steps.append("Passaggio 2: Viene riconosciuta una richiesta di creazione/scrittura. Il modello prepara una struttura per il contenuto.")
+    elif any(w in text_lower for w in ["spiega", "explain", "descrivi", "describe"]):
+        steps.append("Passaggio 2: Viene riconosciuta una richiesta di spiegazione. Il modello organizza le informazioni in modo chiaro.")
+    elif any(w in text_lower for w in ["traduci", "translate"]):
+        steps.append("Passaggio 2: Viene riconosciuta una richiesta di traduzione. Il modello identifica la lingua di partenza e di arrivo.")
+    else:
+        steps.append("Passaggio 2: Il modello analizza il tipo di richiesta e cerca di capire l'intento dell'utente.")
+
+    steps.append("Passaggio 3: Vengono identificati i dettagli chiave: persone, date, numeri, contesto e qualsiasi vincolo specificato.")
+    steps.append("Passaggio 4: Il modello attinge alle sue conoscenze per elaborare una risposta pertinente e completa.")
+    steps.append("Passaggio 5: La risposta viene formulata nel tono e nel formato più appropriati alla richiesta.")
+
+    return {
+        "reasoning_steps": steps,
+        "final_output": f"[Modalità Demo] Questa è una risposta dimostrativa. In modalità reale (con API key OpenAI o Anthropic), qui apparirà la risposta effettiva del modello AI al prompt:\n\n\"{prompt}\"\n\nPer ottenere risposte reali, seleziona OpenAI o Anthropic e inserisci una API key valida.",
+    }
 
 
 def parse_ai_response(content: str) -> dict:
@@ -259,16 +313,18 @@ def parse_ai_response(content: str) -> dict:
 async def analyze(req: AnalyzeRequest):
     if not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Il prompt non può essere vuoto.")
-    if not req.api_key.strip():
-        raise HTTPException(status_code=400, detail="La API key è obbligatoria.")
-    if req.provider not in ("openai", "anthropic"):
-        raise HTTPException(status_code=400, detail="Provider non supportato. Usa 'openai' o 'anthropic'.")
+    if req.provider not in ("openai", "anthropic", "demo"):
+        raise HTTPException(status_code=400, detail="Provider non supportato. Usa 'openai', 'anthropic' o 'demo'.")
+    if req.provider != "demo" and not req.api_key.strip():
+        raise HTTPException(status_code=400, detail="La API key è obbligatoria per il provider selezionato.")
 
     tokens = tokenize(req.prompt)
     structure = analyze_structure(req.prompt)
     entities = extract_entities(req.prompt)
 
-    if req.provider == "openai":
+    if req.provider == "demo":
+        ai_result = generate_demo_response(req.prompt)
+    elif req.provider == "openai":
         ai_result = await call_openai(req.prompt, req.api_key)
     else:
         ai_result = await call_anthropic(req.prompt, req.api_key)
