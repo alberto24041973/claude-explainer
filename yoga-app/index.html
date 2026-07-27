@@ -1,0 +1,672 @@
+<title>OndaYoga — La tua pratica, sempre nuova</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root{
+    --bg:#F2F5F1; --bg2:#E7EDE7; --card:#FFFFFF; --ink:#1E2C28; --muted:#5C6E68;
+    --accent:#4E7D6B; --accent-soft:#DCE8E2; --sand:#B99B62; --line:#D8E0DA;
+    --danger:#A8664F; --ring-track:#DCE4DE;
+    --radius:20px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0D1518; --bg2:#101B1E; --card:#152225; --ink:#E8EFEA; --muted:#93A6A0;
+      --accent:#8FB8A8; --accent-soft:#1D3029; --sand:#E4D5B8; --line:#233436;
+      --danger:#D69880; --ring-track:#233436;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1518; --bg2:#101B1E; --card:#152225; --ink:#E8EFEA; --muted:#93A6A0;
+    --accent:#8FB8A8; --accent-soft:#1D3029; --sand:#E4D5B8; --line:#233436;
+    --danger:#D69880; --ring-track:#233436;
+  }
+  :root[data-theme="light"]{
+    --bg:#F2F5F1; --bg2:#E7EDE7; --card:#FFFFFF; --ink:#1E2C28; --muted:#5C6E68;
+    --accent:#4E7D6B; --accent-soft:#DCE8E2; --sand:#B99B62; --line:#D8E0DA;
+    --danger:#A8664F; --ring-track:#DCE4DE;
+  }
+  *{box-sizing:border-box; margin:0}
+  html,body{height:100%}
+  body{
+    background:linear-gradient(175deg, var(--bg2), var(--bg) 40%);
+    color:var(--ink);
+    font:16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    max-width:520px; margin:0 auto; min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  h1,h2,h3,.serif{font-family:Georgia, "Times New Roman", serif; font-weight:400; text-wrap:balance}
+  main{flex:1; padding:20px 18px 96px}
+  .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
+  .stack{display:flex; flex-direction:column; gap:14px}
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent}
+  button:focus-visible, .chip:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:8px}
+
+  /* ─ Tabs ─ */
+  nav{
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:520px;
+    display:flex; background:var(--card); border-top:1px solid var(--line);
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav button{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; border-radius:12px}
+  nav button.on{color:var(--accent)}
+  nav svg{width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+
+  /* ─ Home ─ */
+  .hero h1{font-size:34px; line-height:1.15; margin:4px 0 2px}
+  .hero p{color:var(--muted); font-size:14px}
+  .field{display:flex; flex-direction:column; gap:8px}
+  .field-label{display:flex; justify-content:space-between; align-items:baseline}
+  .field-label b{font-size:14px; font-weight:600}
+  .field-label span{color:var(--sand); font-size:13px; font-variant-numeric:tabular-nums}
+  .chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    flex:0 0 auto; padding:9px 15px; border-radius:999px; border:1px solid var(--line);
+    background:var(--card); color:var(--muted); font-size:14px; font-weight:500; white-space:nowrap;
+  }
+  .chip.on{background:var(--accent-soft); border-color:var(--accent); color:var(--ink); font-weight:600}
+  input[type=range]{width:100%; accent-color:var(--accent); height:28px}
+  .start{
+    display:block; width:100%; padding:17px; border-radius:999px;
+    background:var(--accent); color:var(--bg); font-size:17px; font-weight:700; letter-spacing:.02em;
+  }
+  .start:active{transform:scale(.985)}
+  .hint{font-size:12.5px; color:var(--muted); text-align:center}
+
+  /* ─ Player ─ */
+  #player{position:fixed; inset:0; z-index:20; background:linear-gradient(170deg, var(--bg2), var(--bg) 45%); display:none; flex-direction:column; max-width:520px; margin:0 auto; padding:calc(14px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+  #player.open{display:flex}
+  .p-top{display:flex; justify-content:space-between; align-items:center}
+  .p-top button{padding:8px; color:var(--muted)}
+  .p-phase{text-align:center}
+  .ringwrap{position:relative; margin:6px auto; width:min(72vw,300px); aspect-ratio:1}
+  .ringwrap svg.ring{width:100%; height:100%; transform:rotate(-90deg)}
+  .ring circle{fill:none; stroke-width:6; stroke-linecap:round}
+  .ring .track{stroke:var(--ring-track)}
+  .ring .prog{stroke:var(--accent); transition:stroke-dashoffset .9s linear}
+  .ring-inner{position:absolute; inset:12%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px}
+  .ring-inner .figure{width:78%; color:var(--sand)}
+  .p-count{font-family:Georgia, serif; font-size:46px; line-height:1; color:var(--ink); font-variant-numeric:tabular-nums}
+  .p-name{text-align:center; margin-top:2px}
+  .p-name h2{font-size:26px}
+  .p-name .sk{color:var(--muted); font-size:14px; font-style:italic}
+  .p-cue{color:var(--muted); text-align:center; font-size:14.5px; max-width:34ch; margin:8px auto 0; min-height:3.2em}
+  .p-next{margin-top:auto; text-align:center; font-size:13px; color:var(--muted)}
+  .p-next b{color:var(--ink); font-weight:600}
+  .p-ctrl{display:flex; justify-content:center; align-items:center; gap:22px; margin-top:12px}
+  .p-ctrl button{width:52px; height:52px; border-radius:50%; border:1px solid var(--line); background:var(--card); display:flex; align-items:center; justify-content:center; color:var(--ink)}
+  .p-ctrl button.big{width:70px; height:70px; background:var(--accent); border:none; color:var(--bg)}
+  .p-ctrl svg{width:24px; height:24px; fill:currentColor}
+  .p-opts{display:flex; justify-content:center; gap:10px; margin-top:14px}
+  .p-opts button{font-size:12.5px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:6px 13px}
+  .p-opts button.on{color:var(--accent); border-color:var(--accent); background:var(--accent-soft)}
+
+  /* ─ Done ─ */
+  .done{position:fixed; inset:0; z-index:30; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:30px; max-width:520px; margin:0 auto}
+  .done.open{display:flex}
+  .done h2{font-size:32px}
+  .done .streakN{font-family:Georgia,serif; font-size:64px; color:var(--sand); line-height:1}
+  .done p{color:var(--muted); max-width:30ch}
+  .done .start{max-width:280px; margin-top:16px}
+
+  /* ─ Pose ─ */
+  .search{width:100%; padding:12px 16px; border-radius:14px; border:1px solid var(--line); background:var(--card); color:var(--ink); font:inherit}
+  .search::placeholder{color:var(--muted)}
+  .pose-row{display:flex; align-items:center; gap:12px; padding:10px 12px}
+  .pose-fig{width:84px; flex:0 0 84px; color:var(--accent); background:var(--accent-soft); border-radius:14px; padding:6px}
+  .pose-info{flex:1; min-width:0}
+  .pose-info b{font-size:15px; display:block}
+  .pose-info small{color:var(--muted); font-style:italic}
+  .pose-meta{font-size:11px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-top:2px}
+  .vote{display:flex; gap:6px}
+  .vote button{width:38px; height:38px; border-radius:50%; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted)}
+  .vote button svg{width:18px; height:18px; fill:currentColor}
+  .vote button.on-like{color:var(--accent); border-color:var(--accent); background:var(--accent-soft)}
+  .vote button.on-no{color:var(--danger); border-color:var(--danger)}
+
+  /* ─ Progressi ─ */
+  .stats{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+  .stat{text-align:center; padding:14px 6px}
+  .stat .n{font-family:Georgia,serif; font-size:30px; color:var(--sand); font-variant-numeric:tabular-nums}
+  .stat .l{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  .week{display:flex; align-items:flex-end; gap:8px; height:90px; padding:14px 14px 8px}
+  .day{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end}
+  .bar{width:100%; max-width:26px; border-radius:6px; background:var(--accent); min-height:3px; opacity:.9}
+  .bar.empty{background:var(--ring-track)}
+  .day small{font-size:10px; color:var(--muted); text-transform:uppercase}
+  .hist{display:flex; justify-content:space-between; align-items:center; padding:11px 14px; border-top:1px solid var(--line); font-size:14px}
+  .hist:first-child{border-top:none}
+  .hist span{color:var(--muted); font-size:12.5px}
+  .empty-note{color:var(--muted); font-size:14px; text-align:center; padding:18px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+</style>
+
+<main id="view"></main>
+
+<nav aria-label="Sezioni">
+  <button id="tab-home" class="on" onclick="go('home')">
+    <svg viewBox="0 0 24 24"><path d="M4 19c5-2 11-2 16 0M12 3c-3 4-3 9 0 13 3-4 3-9 0-13z"/></svg>Pratica</button>
+  <button id="tab-pose" onclick="go('pose')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.4"/><path d="M12 8v5m0 0-5 6m5-6 5 6M6 10l6 1 6-1"/></svg>Pose</button>
+  <button id="tab-prog" onclick="go('prog')">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Progressi</button>
+</nav>
+
+<div id="player">
+  <div class="p-top">
+    <button onclick="quitPractice()" aria-label="Chiudi pratica"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="p-phase"><div class="eyebrow" id="p-phase"></div></div>
+    <div style="width:42px"></div>
+  </div>
+  <div class="ringwrap">
+    <svg class="ring" viewBox="0 0 120 120">
+      <circle class="track" cx="60" cy="60" r="55"/>
+      <circle class="prog" id="ringP" cx="60" cy="60" r="55"/>
+    </svg>
+    <div class="ring-inner">
+      <div class="figure" id="p-fig"></div>
+      <div class="p-count" id="p-count">0</div>
+    </div>
+  </div>
+  <div class="p-name">
+    <h2 id="p-name"></h2>
+    <div class="sk" id="p-sk"></div>
+  </div>
+  <p class="p-cue" id="p-cue"></p>
+  <div class="p-next" id="p-next"></div>
+  <div class="p-ctrl">
+    <button onclick="stepBack()" aria-label="Posa precedente"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6l-10 6 10 6z"/></svg></button>
+    <button class="big" id="p-play" onclick="togglePause()" aria-label="Pausa / riprendi"></button>
+    <button onclick="stepFwd()" aria-label="Posa successiva"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6l10 6-10 6z"/></svg></button>
+  </div>
+  <div class="p-opts">
+    <button id="o-voice" onclick="toggleVoice()">Voce guida</button>
+    <button id="o-sound" onclick="toggleSound()">Suono ambient</button>
+  </div>
+</div>
+
+<div class="done" id="done">
+  <div class="eyebrow">Pratica completata</div>
+  <h2>Namasté.</h2>
+  <div class="streakN" id="done-streak">1</div>
+  <p id="done-msg"></p>
+  <button class="start" onclick="closeDone()">Torna all'inizio</button>
+</div>
+
+<script>
+/* ───────────────────────── Dati ───────────────────────── */
+const AREAS = [
+  {id:'schiena',  l:'Schiena bassa'},
+  {id:'core',     l:'Core'},
+  {id:'anche',    l:'Apertura anche'},
+  {id:'spalle',   l:'Spalle e collo'},
+  {id:'hamstring',l:'Hamstring'},
+  {id:'backbend', l:'Backbend'},
+  {id:'equilibrio',l:'Equilibrio'},
+  {id:'torsioni', l:'Torsioni'},
+  {id:'glutei',   l:'Glutei'},
+];
+const LEVELS = ['Principiante 1','Principiante 2','Intermedio 1','Intermedio 2','Avanzato'];
+const STYLES = {
+  vinyasa:{l:'Vinyasa', pace:26, w:{centering:.06,warmup:.16,standing:.42,floor:.24,rest:.12}},
+  hatha:  {l:'Hatha',   pace:40, w:{centering:.08,warmup:.16,standing:.34,floor:.28,rest:.14}},
+  gentle: {l:'Gentle',  pace:46, w:{centering:.12,warmup:.20,standing:.20,floor:.30,rest:.18}, cap:3},
+  yin:    {l:'Yin',     pace:110,w:{centering:.08,warmup:0,  standing:0,  floor:.72,rest:.20}, cap:3},
+};
+
+/* fig: testa [x,y] + polilinee — figure stilizzate, non anatomiche */
+const POSES = [
+ {id:'sukhasana', nome:'Seduta facile', sk:'Sukhasana', lvl:1, fase:'centering', aree:['anche'],
+  cue:'Siediti a gambe incrociate, schiena lunga, e porta l’attenzione al respiro.',
+  fig:{h:[110,38], L:[[110,47,110,78],[110,78,85,92,110,98],[110,78,135,92,110,98],[110,56,88,80],[110,56,132,80]]}},
+ {id:'farfalla', nome:'Farfalla', sk:'Baddha Konasana', lvl:1, fase:'centering', aree:['anche'],
+  cue:'Pianta contro pianta, lascia scendere le ginocchia verso il suolo.',
+  fig:{h:[110,42], L:[[110,52,110,85],[110,85,86,76,105,93],[110,85,134,76,115,93],[110,64,104,90]]}},
+ {id:'gatto', nome:'Gatto e mucca', sk:'Marjaryasana', lvl:1, fase:'warmup', aree:['schiena','spalle'],
+  cue:'A quattro zampe, alterna schiena rotonda inspirando ed espirando.',
+  fig:{h:[70,52], L:[[78,62,108,56,138,64],[80,62,76,100],[138,64,142,100]]}},
+ {id:'bambino', nome:'Posizione del bambino', sk:'Balasana', lvl:1, fase:'rest', aree:['schiena','anche'],
+  cue:'Fronte a terra, braccia distese in avanti, lascia andare ogni tensione.',
+  fig:{h:[58,90], L:[[66,88,96,66,124,80],[66,92,44,99],[124,80,136,98,110,98]]}},
+ {id:'canegiu', nome:'Cane a testa in giù', sk:'Adho Mukha Svanasana', lvl:1, fase:'warmup', aree:['hamstring','spalle','schiena'],
+  cue:'Mani e piedi a terra, allunga la schiena spingendo i fianchi verso l’alto.',
+  fig:{h:[72,86], L:[[62,100,106,44],[106,44,152,100]]}},
+ {id:'uttanasana', nome:'Piegamento in avanti', sk:'Uttanasana', lvl:1, fase:'warmup', aree:['hamstring','schiena'],
+  cue:'Da in piedi, lasciati cadere in avanti con le ginocchia morbide.',
+  fig:{h:[86,86], L:[[120,100,118,55],[118,55,92,78],[92,78,90,100]]}},
+ {id:'ardha', nome:'Mezzo piegamento', sk:'Ardha Uttanasana', lvl:1, fase:'warmup', aree:['hamstring','schiena'],
+  cue:'Inspira e allunga la schiena parallela al suolo.',
+  fig:{h:[70,55], L:[[120,100,118,55],[118,55,82,56],[92,58,92,82]]}},
+ {id:'affondobasso', nome:'Affondo basso', sk:'Anjaneyasana', lvl:1, fase:'warmup', aree:['anche','glutei'], lati:1,
+  cue:'Ginocchio posteriore a terra, affonda il bacino e apri il petto.',
+  fig:{h:[108,32], L:[[95,100,92,80,110,72],[110,72,140,94,162,96],[110,72,108,42],[108,50,96,24],[108,50,122,24]]}},
+ {id:'sfinge', nome:'Sfinge', sk:'Salamba Bhujangasana', lvl:1, fase:'floor', aree:['backbend','schiena'],
+  cue:'Sdraiato a pancia in giù, avambracci a terra, solleva dolcemente il petto.',
+  fig:{h:[76,64], L:[[100,96,160,96],[100,96,80,74],[82,78,78,92],[78,92,58,92]]}},
+ {id:'cobra', nome:'Cobra', sk:'Bhujangasana', lvl:1, fase:'floor', aree:['backbend','schiena'],
+  cue:'Mani sotto le spalle, solleva il petto tenendo il bacino a terra.',
+  fig:{h:[66,58], L:[[90,98,160,98],[90,98,72,68],[78,80,82,100]]}},
+ {id:'montagna', nome:'Montagna', sk:'Tadasana', lvl:1, fase:'standing', aree:['equilibrio'],
+  cue:'In piedi, radicato, cresci verso l’alto dalla corona della testa.',
+  fig:{h:[110,20], L:[[110,29,110,70],[110,42,94,68],[110,42,126,68],[110,70,101,100],[110,70,119,100]]}},
+ {id:'sedia', nome:'Sedia', sk:'Utkatasana', lvl:2, fase:'standing', aree:['glutei','core'],
+  cue:'Piega le ginocchia come per sederti e allunga le braccia in diagonale.',
+  fig:{h:[120,38], L:[[104,100,99,78],[99,78,113,68],[113,68,119,46],[119,46,132,20]]}},
+ {id:'guerriero1', nome:'Guerriero I', sk:'Virabhadrasana I', lvl:2, fase:'standing', aree:['anche','glutei'], lati:1,
+  cue:'Affondo con il busto frontale, braccia al cielo, sguardo avanti.',
+  fig:{h:[113,30], L:[[95,100,95,82,115,68],[115,68,152,100],[115,68,113,40],[113,48,100,22],[113,48,126,22]]}},
+ {id:'guerriero2', nome:'Guerriero II', sk:'Virabhadrasana II', lvl:2, fase:'standing', aree:['anche','glutei'], lati:1,
+  cue:'Braccia parallele al suolo, ginocchio davanti piegato, sguardo oltre la mano.',
+  fig:{h:[110,32], L:[[110,66,86,82,86,100],[110,66,150,100],[110,66,110,44],[110,48,70,46],[110,48,150,46]]}},
+ {id:'angolo', nome:'Angolo laterale esteso', sk:'Utthita Parsvakonasana', lvl:2, fase:'standing', aree:['anche','core'], lati:1,
+  cue:'Avambraccio sulla coscia, il braccio alto disegna una lunga diagonale.',
+  fig:{h:[80,42], L:[[108,66,86,82,86,100],[108,66,150,100],[108,66,85,50],[85,50,86,72],[85,50,98,20]]}},
+ {id:'triangolo', nome:'Triangolo', sk:'Trikonasana', lvl:2, fase:'standing', aree:['hamstring','core'], lati:1,
+  cue:'Gambe tese, inclina il busto e apri il petto verso l’alto.',
+  fig:{h:[66,44], L:[[100,62,72,100],[100,62,138,100],[100,62,73,49],[73,49,68,78],[73,49,80,20]]}},
+ {id:'dea', nome:'Dea', sk:'Utkata Konasana', lvl:2, fase:'standing', aree:['anche','glutei'],
+  cue:'Squat largo, ginocchia aperte, braccia a cactus.',
+  fig:{h:[110,32], L:[[110,72,85,80,76,100],[110,72,135,80,144,100],[110,72,110,44],[110,50,90,52,90,34],[110,50,130,52,130,34]]}},
+ {id:'albero', nome:'Albero', sk:'Vrksasana', lvl:2, fase:'standing', aree:['equilibrio'], lati:1,
+  cue:'Pianta il piede sull’interno coscia e unisci le mani sopra la testa.',
+  fig:{h:[110,32], L:[[110,100,110,60],[110,60,110,42],[110,82,128,72],[128,72,112,60],[110,46,98,22,110,12],[110,46,122,22,110,12]]}},
+ {id:'aquila', nome:'Aquila', sk:'Garudasana', lvl:3, fase:'standing', aree:['equilibrio','spalle'], lati:1,
+  cue:'Avvolgi gamba su gamba e braccio su braccio, poi affonda leggermente.',
+  fig:{h:[108,40], L:[[108,100,104,76],[104,76,120,88],[104,76,108,50],[108,58,124,62],[108,56,122,48]]}},
+ {id:'piramide', nome:'Piramide', sk:'Parsvottanasana', lvl:3, fase:'standing', aree:['hamstring'], lati:1,
+  cue:'Gambe tese, piegati sopra la gamba davanti con la schiena lunga.',
+  fig:{h:[64,78], L:[[105,62,80,100],[105,62,136,100],[105,62,70,76],[70,76,68,96]]}},
+ {id:'guerriero3', nome:'Guerriero III', sk:'Virabhadrasana III', lvl:4, fase:'standing', aree:['equilibrio','core','glutei'], lati:1,
+  cue:'Corpo a T su una gamba sola: braccia, busto e gamba in un’unica linea.',
+  fig:{h:[50,53], L:[[105,100,105,60],[105,60,60,55],[105,60,152,55],[60,55,42,60]]}},
+ {id:'mezzaluna', nome:'Mezzaluna', sk:'Ardha Chandrasana', lvl:4, fase:'standing', aree:['equilibrio','anche'], lati:1,
+  cue:'Una mano a terra, la gamba dietro si solleva: apri tutto il fianco.',
+  fig:{h:[76,42], L:[[100,100,98,60],[98,60,140,50],[95,68,86,100],[92,54,94,24]]}},
+ {id:'plank', nome:'Plank', sk:'Phalakasana', lvl:2, fase:'standing', aree:['core','spalle'],
+  cue:'Una linea sola dalla testa ai talloni, addome attivo.',
+  fig:{h:[56,54], L:[[68,60,160,86],[70,60,70,100],[160,86,168,100]]}},
+ {id:'plankLat', nome:'Plank laterale', sk:'Vasisthasana', lvl:3, fase:'standing', aree:['core','spalle'], lati:1,
+  cue:'Peso su una mano, il corpo in diagonale, il braccio libero al cielo.',
+  fig:{h:[80,56], L:[[78,100,80,66],[80,66,162,90],[80,66,84,36]]}},
+ {id:'corvo', nome:'Corvo', sk:'Bakasana', lvl:5, fase:'standing', aree:['core','equilibrio','spalle'],
+  cue:'Ginocchia sui gomiti, sposta il peso in avanti e lascia i piedi leggeri.',
+  fig:{h:[93,58], L:[[102,66,128,62],[102,66,100,100],[128,62,136,76,122,82]]}},
+ {id:'canesu', nome:'Cane a testa in su', sk:'Urdhva Mukha Svanasana', lvl:2, fase:'floor', aree:['backbend','spalle'],
+  cue:'Braccia tese, cosce sollevate, il petto si apre in avanti.',
+  fig:{h:[70,52], L:[[95,90,162,96],[95,90,74,62],[80,70,84,100]]}},
+ {id:'locusta', nome:'Locusta', sk:'Salabhasana', lvl:2, fase:'floor', aree:['backbend','glutei','schiena'],
+  cue:'A pancia in giù, solleva insieme petto e gambe.',
+  fig:{h:[62,72], L:[[70,79,100,92],[100,92,142,80],[74,82,98,80]]}},
+ {id:'ponte', nome:'Ponte', sk:'Setu Bandha Sarvangasana', lvl:1, fase:'floor', aree:['backbend','glutei','schiena'],
+  cue:'Piedi a terra vicini ai glutei, solleva il bacino vertebra dopo vertebra.',
+  fig:{h:[66,94], L:[[78,93,118,66],[118,66,132,74],[132,74,136,100],[80,96,112,98]]}},
+ {id:'ruota', nome:'Ruota', sk:'Urdhva Dhanurasana', lvl:5, fase:'floor', aree:['backbend','spalle'],
+  cue:'Mani e piedi a terra, spingi il petto verso l’alto in un grande arco.',
+  fig:{h:[72,84], L:[[70,100,86,64,110,55],[110,55,136,70,150,100]]}},
+ {id:'cammello', nome:'Cammello', sk:'Ustrasana', lvl:3, fase:'floor', aree:['backbend','spalle'],
+  cue:'In ginocchio, porta le mani ai talloni e apri il cuore al cielo.',
+  fig:{h:[86,44], L:[[100,98,132,98],[100,98,102,72],[102,72,90,52],[94,58,118,90]]}},
+ {id:'piccione', nome:'Piccione', sk:'Eka Pada Rajakapotasana', lvl:3, fase:'floor', aree:['anche','glutei'], lati:1,
+  cue:'Gamba davanti piegata a terra, quella dietro distesa: respira nell’anca.',
+  fig:{h:[92,45], L:[[95,85,70,96],[95,85,152,95],[95,85,92,55],[92,66,84,90]]}},
+ {id:'paschi', nome:'Piegamento da seduto', sk:'Paschimottanasana', lvl:1, fase:'floor', aree:['hamstring','schiena'],
+  cue:'Gambe distese, allungati in avanti dal bacino, senza forzare.',
+  fig:{h:[133,72], L:[[100,90,156,93],[100,90,126,70],[126,70,150,88]]}},
+ {id:'janu', nome:'Testa al ginocchio', sk:'Janu Sirsasana', lvl:2, fase:'floor', aree:['hamstring','anche'], lati:1,
+  cue:'Una gamba distesa, una piegata: piegati sopra quella distesa.',
+  fig:{h:[133,72], L:[[100,90,156,93],[100,90,84,80,96,95],[100,90,126,70],[126,70,150,88]]}},
+ {id:'barca', nome:'Barca', sk:'Navasana', lvl:3, fase:'floor', aree:['core'],
+  cue:'In equilibrio sugli ischi, gambe e busto formano una V.',
+  fig:{h:[87,50], L:[[110,85,93,58],[110,85,138,58],[96,64,124,66]]}},
+ {id:'torsioneSed', nome:'Torsione da seduto', sk:'Ardha Matsyendrasana', lvl:2, fase:'floor', aree:['torsioni','schiena'], lati:1,
+  cue:'Da seduto, ruota il busto verso il ginocchio piegato ad ogni espiro.',
+  fig:{h:[110,44], L:[[110,88,110,55],[110,88,130,76,130,95],[110,88,146,95],[110,62,131,72],[110,64,94,90]]}},
+ {id:'torsioneSup', nome:'Torsione supina', sk:'Supta Matsyendrasana', lvl:1, fase:'rest', aree:['torsioni','schiena'], lati:1,
+  cue:'Sulla schiena, lascia cadere le ginocchia da un lato, braccia aperte.',
+  fig:{h:[66,88], L:[[76,90,112,88],[112,88,132,78],[132,78,148,88],[82,92,60,96]]}},
+ {id:'felice', nome:'Bambino felice', sk:'Ananda Balasana', lvl:1, fase:'rest', aree:['anche'],
+  cue:'Sulla schiena, afferra i piedi e dondola dolcemente.',
+  fig:{h:[76,90], L:[[84,94,122,92],[122,92,133,72],[133,72,128,55],[100,90,127,60]]}},
+ {id:'viparita', nome:'Gambe in alto', sk:'Viparita Karani', lvl:1, fase:'rest', aree:['hamstring'],
+  cue:'Schiena a terra e gambe verticali: il riposo che rigenera.',
+  fig:{h:[64,90], L:[[74,93,114,91],[114,91,118,52],[80,94,64,102]]}},
+ {id:'savasana', nome:'Rilassamento finale', sk:'Savasana', lvl:1, fase:'rest', aree:[],
+  cue:'Sdraiati, chiudi gli occhi e lascia che la pratica si depositi.',
+  fig:{h:[60,92], L:[[70,94,160,96],[80,96,72,104],[100,95,104,104]]}},
+];
+
+/* ─────────────────────── Stato ─────────────────────── */
+const store = {
+  get(k,d){ try{ return JSON.parse(localStorage.getItem('onda.'+k)) ?? d }catch(e){ return d } },
+  set(k,v){ try{ localStorage.setItem('onda.'+k, JSON.stringify(v)) }catch(e){} }
+};
+let votes = store.get('votes',{});          // {poseId: 1 | -1}
+let hist  = store.get('hist',[]);           // [{d:'2026-07-27', min, style}]
+let cfg   = Object.assign({style:'vinyasa', lvl:1, min:20, boost:null, boost2:null}, store.get('cfg',{}));
+let prefs = Object.assign({voice:true, sound:false}, store.get('prefs',{}));
+
+/* ─────────────────────── Figure SVG ─────────────────────── */
+function fig(p){
+  const lines = p.fig.L.map(pts=>{
+    let s=''; for(let i=0;i<pts.length;i+=2) s+=(i?' ':'')+pts[i]+','+pts[i+1];
+    return `<polyline points="${s}"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 220 130" role="img" aria-label="${p.nome}" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="30" y1="112" x2="190" y2="112" stroke-width="2" opacity=".35"/>
+    <circle cx="${p.fig.h[0]}" cy="${p.fig.h[1]}" r="9" fill="currentColor" stroke="none"/>${lines}</svg>`;
+}
+
+/* ─────────────────────── Generatore ─────────────────────── */
+function pick(pool, n, boost, boost2){
+  const out=[]; const bag=pool.slice();
+  while(out.length<n && bag.length){
+    let tot=0; const w=bag.map(p=>{
+      let x=1;
+      if(votes[p.id]===1) x+=2;
+      if(boost  && p.aree.includes(boost))  x+=3;
+      if(boost2 && p.aree.includes(boost2)) x+=1.5;
+      tot+=x; return x;
+    });
+    let r=Math.random()*tot, i=0;
+    while(r>w[i]){ r-=w[i]; i++; }
+    out.push(bag.splice(i,1)[0]);
+  }
+  return out;
+}
+function generate(){
+  const st=STYLES[cfg.style];
+  const cap=Math.min(cfg.lvl+1, st.cap||5);
+  const ok=p=> p.lvl<=cap && votes[p.id]!==-1;
+  const total=cfg.min*60;
+  const steps=[];
+  const phaseLabel={centering:'Centratura', warmup:'Riscaldamento', standing:'In piedi', floor:'A terra', rest:'Chiusura'};
+
+  for(const fase of ['centering','warmup','standing','floor','rest']){
+    let budget=total*st.w[fase];
+    if(budget<20) continue;
+    let pool=POSES.filter(p=>p.fase===fase && ok(p));
+    if(fase==='rest') pool=pool.filter(p=>p.id!=='savasana');
+    if(!pool.length) continue;
+    const per=st.pace;
+    while(budget>=per*0.7 && pool.length+1){
+      const cand=pick(pool.length?pool:POSES.filter(p=>p.fase===fase&&ok(p)), 1, cfg.boost, cfg.boost2)[0];
+      if(!cand) break;
+      pool=pool.filter(p=>p.id!==cand.id);
+      const dur=Math.round(per*(0.9+Math.random()*0.3));
+      if(cand.lati){
+        const half=Math.max(12, Math.round(dur/1.6));
+        if(budget < half*2) { budget-=1; if(!pool.length) break; continue; }
+        steps.push({p:cand, side:'destro', dur:half, fase:phaseLabel[fase]});
+        steps.push({p:cand, side:'sinistro', dur:half, fase:phaseLabel[fase]});
+        budget-=half*2;
+      }else{
+        steps.push({p:cand, dur, fase:phaseLabel[fase]});
+        budget-=dur;
+      }
+      if(!pool.length) pool=POSES.filter(p=>p.fase===fase && ok(p) && p.id!==cand.id);
+    }
+  }
+  const sav=POSES.find(p=>p.id==='savasana');
+  steps.push({p:sav, dur:Math.max(45,Math.round(total*0.1)), fase:'Chiusura'});
+  return steps;
+}
+
+/* ─────────────────────── Player ─────────────────────── */
+let seq=[], idx=0, left=0, elapsed=0, totalDur=0, timer=null, paused=false, wakeLock=null;
+const CIRC=2*Math.PI*55;
+const $=id=>document.getElementById(id);
+
+function startPractice(){
+  seq=generate(); idx=0; elapsed=0; paused=false;
+  totalDur=seq.reduce((s,x)=>s+x.dur,0);
+  $('player').classList.add('open');
+  $('ringP').style.strokeDasharray=CIRC;
+  syncOpts();
+  loadStep();
+  timer=setInterval(tick,1000);
+  try{ navigator.wakeLock && navigator.wakeLock.request('screen').then(w=>wakeLock=w).catch(()=>{}) }catch(e){}
+  if(prefs.sound) startPad();
+}
+function loadStep(){
+  const s=seq[idx];
+  left=s.dur;
+  $('p-phase').textContent=`${s.fase} · ${idx+1} di ${seq.length}`;
+  $('p-fig').innerHTML=fig(s.p);
+  $('p-name').textContent=s.p.nome + (s.side?` — lato ${s.side}`:'');
+  $('p-sk').textContent=s.p.sk;
+  $('p-cue').textContent=s.p.cue;
+  $('p-count').textContent=left;
+  const nx=seq[idx+1];
+  $('p-next').innerHTML= nx? `A seguire: <b>${nx.p.nome}${nx.side?' ('+nx.side+')':''}</b>` : 'Ultima posizione';
+  drawRing(); drawPlay();
+  if(prefs.voice) say(`${s.p.nome}${s.side? ', lato '+s.side:''}. ${s.p.cue}`);
+}
+function tick(){
+  if(paused) return;
+  left--; elapsed++;
+  if(left<=0){
+    if(idx<seq.length-1){ idx++; loadStep(); }
+    else finish();
+    return;
+  }
+  $('p-count').textContent=left;
+  drawRing();
+}
+function drawRing(){
+  $('ringP').style.strokeDashoffset = CIRC*(1-Math.min(1,elapsed/totalDur));
+}
+function drawPlay(){
+  $('p-play').innerHTML = paused
+    ? '<svg viewBox="0 0 24 24" width="28" height="28"><path d="M7 4l14 8-14 8z"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="28" height="28"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+}
+function togglePause(){ paused=!paused; drawPlay(); if(paused) speechSynthesis.cancel(); }
+function stepFwd(){ elapsed+=Math.max(0,left); if(idx<seq.length-1){ idx++; loadStep(); } else finish(); }
+function stepBack(){ elapsed=Math.max(0,elapsed-(seq[idx].dur-left)); if(idx>0){ idx--; elapsed=Math.max(0,elapsed-seq[idx].dur); } loadStep(); }
+function quitPractice(){ stopAll(); $('player').classList.remove('open'); }
+function stopAll(){
+  clearInterval(timer); timer=null; speechSynthesis.cancel(); stopPad();
+  try{ wakeLock && wakeLock.release() }catch(e){} wakeLock=null;
+}
+function finish(){
+  stopAll();
+  const today=dstr(new Date());
+  const doneMin=Math.max(1,Math.round(elapsed/60));
+  hist.push({d:today, min:doneMin, style:STYLES[cfg.style].l});
+  store.set('hist',hist);
+  $('player').classList.remove('open');
+  const s=streak();
+  $('done-streak').textContent=s;
+  $('done-msg').textContent = s>1
+    ? `Giorni di pratica consecutivi. La costanza è la tua posa più avanzata.`
+    : `Hai completato ${doneMin} minuti di ${STYLES[cfg.style].l}. Ogni pratica lascia qualcosa.`;
+  $('done').classList.add('open');
+}
+function closeDone(){ $('done').classList.remove('open'); go('prog'); }
+
+/* voce */
+function say(txt){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(txt);
+    u.lang='it-IT'; u.rate=0.95; u.pitch=1;
+    const v=speechSynthesis.getVoices().find(v=>v.lang && v.lang.startsWith('it'));
+    if(v) u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+/* pad ambient — due sinusoidi con respiro lento */
+let ac=null, padGain=null;
+function startPad(){
+  try{
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    padGain=ac.createGain(); padGain.gain.value=0.04; padGain.connect(ac.destination);
+    [[110,0],[164.81,3]].forEach(([f,det])=>{
+      const o=ac.createOscillator(); o.type='sine'; o.frequency.value=f; o.detune.value=det;
+      o.connect(padGain); o.start();
+    });
+    const lfo=ac.createOscillator(), lg=ac.createGain();
+    lfo.frequency.value=0.08; lg.gain.value=0.02;
+    lfo.connect(lg); lg.connect(padGain.gain); lfo.start();
+  }catch(e){}
+}
+function stopPad(){ try{ ac && ac.close() }catch(e){} ac=null; }
+function toggleVoice(){ prefs.voice=!prefs.voice; store.set('prefs',prefs); if(!prefs.voice) speechSynthesis.cancel(); syncOpts(); }
+function toggleSound(){ prefs.sound=!prefs.sound; store.set('prefs',prefs); prefs.sound? startPad(): stopPad(); syncOpts(); }
+function syncOpts(){
+  $('o-voice').classList.toggle('on',prefs.voice);
+  $('o-sound').classList.toggle('on',prefs.sound);
+}
+
+/* ─────────────────────── Streak / stats ─────────────────────── */
+function dstr(d){ return d.toISOString().slice(0,10) }
+function streak(){
+  const days=new Set(hist.map(h=>h.d));
+  let n=0; const d=new Date();
+  if(!days.has(dstr(d))) d.setDate(d.getDate()-1);
+  while(days.has(dstr(d))){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+
+/* ─────────────────────── Viste ─────────────────────── */
+function go(v){
+  ['home','pose','prog'].forEach(t=>$('tab-'+t).classList.toggle('on',t===v));
+  if(v==='home') renderHome();
+  if(v==='pose') renderPose();
+  if(v==='prog') renderProg();
+  window.scrollTo(0,0);
+}
+function chip(l,on,fn){ return `<button class="chip ${on?'on':''}" onclick="${fn}">${l}</button>` }
+
+function renderHome(){
+  const boostL=id=> id? AREAS.find(a=>a.id===id).l : null;
+  $('view').innerHTML=`
+  <div class="stack">
+    <div class="hero">
+      <div class="eyebrow">OndaYoga</div>
+      <h1>Mai la stessa pratica due volte.</h1>
+      <p>Scegli gli ingredienti: la sequenza di oggi viene generata solo per te.</p>
+    </div>
+    <div class="card field">
+      <div class="field-label"><b>Stile</b></div>
+      <div class="chips">${Object.entries(STYLES).map(([k,s])=>chip(s.l,cfg.style===k,`setCfg('style','${k}')`)).join('')}</div>
+    </div>
+    <div class="card field">
+      <div class="field-label"><b>Livello</b><span>${LEVELS[cfg.lvl-1]}</span></div>
+      <input type="range" min="1" max="5" step="1" value="${cfg.lvl}" oninput="setCfg('lvl',+this.value)" aria-label="Livello">
+    </div>
+    <div class="card field">
+      <div class="field-label"><b>Durata</b><span>${cfg.min} min</span></div>
+      <input type="range" min="5" max="60" step="5" value="${cfg.min}" oninput="setCfg('min',+this.value)" aria-label="Durata in minuti">
+    </div>
+    <div class="card field">
+      <div class="field-label"><b>Boost</b><span>${boostL(cfg.boost)??'nessuno'}${cfg.boost2? ' + '+boostL(cfg.boost2):''}</span></div>
+      <div class="chips">${chip('Nessuno',!cfg.boost,`setBoost(null)`)}${AREAS.map(a=>chip(a.l, cfg.boost===a.id||cfg.boost2===a.id, `setBoost('${a.id}')`)).join('')}</div>
+    </div>
+    <button class="start" onclick="startPractice()">Inizia la pratica</button>
+    <p class="hint">Le pose che segni come "non piaciute" non appariranno mai.</p>
+  </div>`;
+}
+function setCfg(k,v){ cfg[k]=v; store.set('cfg',cfg); renderHome(); }
+function setBoost(id){
+  if(id===null){ cfg.boost=null; cfg.boost2=null; }
+  else if(cfg.boost===id){ cfg.boost=cfg.boost2; cfg.boost2=null; }
+  else if(cfg.boost2===id){ cfg.boost2=null; }
+  else if(!cfg.boost){ cfg.boost=id; }
+  else { cfg.boost2=id; }
+  store.set('cfg',cfg); renderHome();
+}
+
+let poseFilter='tutte', poseQ='';
+function renderPose(){
+  $('view').innerHTML=`
+  <div class="stack">
+    <div>
+      <div class="eyebrow">Libreria</div>
+      <h1 style="font-size:28px">Pose nella tua pratica</h1>
+    </div>
+    <input class="search" placeholder="Cerca una posa…" value="${poseQ}" oninput="poseQ=this.value.toLowerCase();updatePoseList()" aria-label="Cerca una posa">
+    <div class="chips">
+      ${chip('Tutte',poseFilter==='tutte',`poseFilter='tutte';renderPose()`)}
+      ${chip('Piaciute',poseFilter==='si',`poseFilter='si';renderPose()`)}
+      ${chip('Non piaciute',poseFilter==='no',`poseFilter='no';renderPose()`)}
+    </div>
+    <div class="stack" style="gap:10px" id="pose-list"></div>
+  </div>`;
+  updatePoseList();
+}
+function updatePoseList(){
+  const list=POSES.filter(p=>{
+    if(poseFilter==='si' && votes[p.id]!==1) return false;
+    if(poseFilter==='no' && votes[p.id]!==-1) return false;
+    if(poseQ && !(p.nome+' '+p.sk).toLowerCase().includes(poseQ)) return false;
+    return true;
+  });
+  $('pose-list').innerHTML = list.map(p=>`
+      <div class="card pose-row">
+        <div class="pose-fig">${fig(p)}</div>
+        <div class="pose-info">
+          <b>${p.nome}</b><small>${p.sk}</small>
+          <div class="pose-meta">${LEVELS[p.lvl-1]}${p.aree.length? ' · '+p.aree.map(a=>AREAS.find(x=>x.id===a).l).join(', '):''}</div>
+        </div>
+        <div class="vote">
+          <button class="${votes[p.id]===1?'on-like':''}" onclick="vote('${p.id}',1)" aria-label="Mi piace ${p.nome}">
+            <svg viewBox="0 0 24 24"><path d="M2 10h4v11H2zM8 21h9.5a2.5 2.5 0 0 0 2.4-1.8l1.9-6.5A2 2 0 0 0 19.9 10H14l1-4.5A2 2 0 0 0 13 3l-5 7z"/></svg></button>
+          <button class="${votes[p.id]===-1?'on-no':''}" onclick="vote('${p.id}',-1)" aria-label="Non mi piace ${p.nome}">
+            <svg viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M2 10h4v11H2zM8 21h9.5a2.5 2.5 0 0 0 2.4-1.8l1.9-6.5A2 2 0 0 0 19.9 10H14l1-4.5A2 2 0 0 0 13 3l-5 7z"/></svg></button>
+        </div>
+      </div>`).join('') || '<p class="empty-note">Nessuna posa qui, per ora.</p>';
+}
+function vote(id,v){
+  if(id==='savasana' && v===-1) return;
+  votes[id] = votes[id]===v ? undefined : v;
+  if(votes[id]===undefined) delete votes[id];
+  store.set('votes',votes); updatePoseList();
+}
+
+function renderProg(){
+  const totMin=hist.reduce((s,h)=>s+h.min,0);
+  const days=['lun','mar','mer','gio','ven','sab','dom'];
+  const week=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=dstr(d);
+    const min=hist.filter(h=>h.d===key).reduce((s,h)=>s+h.min,0);
+    week.push({l:days[(d.getDay()+6)%7], min});
+  }
+  const max=Math.max(10,...week.map(w=>w.min));
+  const recent=hist.slice(-14).reverse();
+  $('view').innerHTML=`
+  <div class="stack">
+    <div>
+      <div class="eyebrow">Il tuo percorso</div>
+      <h1 style="font-size:28px">Progressi</h1>
+    </div>
+    <div class="stats">
+      <div class="card stat"><div class="n">${streak()}</div><div class="l">streak giorni</div></div>
+      <div class="card stat"><div class="n">${hist.length}</div><div class="l">pratiche</div></div>
+      <div class="card stat"><div class="n">${totMin}</div><div class="l">minuti</div></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="padding:2px 4px">Ultimi 7 giorni</div>
+      <div class="week">
+        ${week.map(w=>`<div class="day"><div class="bar ${w.min?'':'empty'}" style="height:${Math.max(4,Math.round(w.min/max*100))}%"></div><small>${w.l}</small></div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="padding:6px 2px">
+      ${recent.map(h=>`<div class="hist"><b>${h.style} · ${h.min} min</b><span>${fmtDate(h.d)}</span></div>`).join('') || '<p class="empty-note">Completa la prima pratica per iniziare il tuo percorso.</p>'}
+    </div>
+  </div>`;
+}
+function fmtDate(s){
+  const [y,m,d]=s.split('-');
+  return `${+d} ${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][+m-1]}`;
+}
+
+/* precarica voci TTS su iOS */
+try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>{} }catch(e){}
+go('home');
+</script>
