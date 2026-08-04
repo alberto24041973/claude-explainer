@@ -40,7 +40,7 @@
   .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
   .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px}
   .stack{display:flex; flex-direction:column; gap:14px}
-  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent}
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
   button:focus-visible, .chip:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:8px}
 
   /* ─ Tabs ─ */
@@ -486,6 +486,7 @@ const CIRC=2*Math.PI*55;
 const $=id=>document.getElementById(id);
 
 function startPractice(){
+  if(timer){ clearInterval(timer); timer=null; }
   seq=generate(); idx=0; elapsed=0; paused=false;
   totalDur=seq.reduce((s,x)=>s+x.dur,0);
   $('player').classList.add('open');
@@ -533,7 +534,9 @@ function stepFwd(){ elapsed+=Math.max(0,left); if(idx<seq.length-1){ idx++; load
 function stepBack(){ elapsed=Math.max(0,elapsed-(seq[idx].dur-left)); if(idx>0){ idx--; elapsed=Math.max(0,elapsed-seq[idx].dur); } loadStep(); }
 function quitPractice(){ stopAll(); $('player').classList.remove('open'); }
 function stopAll(){
-  clearInterval(timer); timer=null; speechSynthesis.cancel();
+  clearInterval(timer); timer=null;
+  if(sayT){ clearTimeout(sayT); sayT=null; }
+  speechSynthesis.cancel();
   try{ wakeLock && wakeLock.release() }catch(e){} wakeLock=null;
 }
 function finish(){
@@ -554,17 +557,25 @@ function finish(){
 function closeDone(){ $('done').classList.remove('open'); go('prog'); }
 
 /* voce */
+let sayT=null;
 function say(txt){
   try{
     speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(txt);
-    u.lang='it-IT'; u.rate=0.95; u.pitch=1;
-    const v=speechSynthesis.getVoices().find(v=>v.lang && v.lang.startsWith('it'));
-    if(v) u.voice=v;
-    speechSynthesis.speak(u);
+    if(sayT) clearTimeout(sayT);
+    /* iOS Safari perde l'utterance se speak() segue cancel() nello stesso tick */
+    sayT=setTimeout(()=>{
+      try{
+        speechSynthesis.resume();
+        const u=new SpeechSynthesisUtterance(txt);
+        u.lang='it-IT'; u.rate=0.95; u.pitch=1;
+        const v=speechSynthesis.getVoices().find(v=>v.lang && v.lang.startsWith('it'));
+        if(v) u.voice=v;
+        speechSynthesis.speak(u);
+      }catch(e){}
+    },80);
   }catch(e){}
 }
-function toggleVoice(){ prefs.voice=!prefs.voice; store.set('prefs',prefs); if(!prefs.voice) speechSynthesis.cancel(); syncOpts(); }
+function toggleVoice(){ prefs.voice=!prefs.voice; store.set('prefs',prefs); if(!prefs.voice){ if(sayT){ clearTimeout(sayT); sayT=null; } speechSynthesis.cancel(); } syncOpts(); }
 function syncOpts(){
   $('o-voice').classList.toggle('on',prefs.voice);
 }
@@ -607,12 +618,12 @@ function renderHome(){
       <div class="chips">${Object.entries(STYLES[cfg.disc]).map(([k,s])=>chip(s.l,cfg.style===k,`setCfg('style','${k}')`)).join('')}</div>
     </div>
     <div class="card field">
-      <div class="field-label"><b>Livello</b><span>${LEVELS[cfg.lvl-1]}</span></div>
-      <input type="range" min="1" max="5" step="1" value="${cfg.lvl}" oninput="setCfg('lvl',+this.value)" aria-label="Livello">
+      <div class="field-label"><b>Livello</b><span id="lvl-label">${LEVELS[cfg.lvl-1]}</span></div>
+      <input type="range" min="1" max="5" step="1" value="${cfg.lvl}" oninput="setSlider('lvl',+this.value)" aria-label="Livello">
     </div>
     <div class="card field">
-      <div class="field-label"><b>Durata</b><span>${cfg.min} min</span></div>
-      <input type="range" min="5" max="60" step="5" value="${cfg.min}" oninput="setCfg('min',+this.value)" aria-label="Durata in minuti">
+      <div class="field-label"><b>Durata</b><span id="min-label">${cfg.min} min</span></div>
+      <input type="range" min="5" max="60" step="5" value="${cfg.min}" oninput="setSlider('min',+this.value)" aria-label="Durata in minuti">
     </div>
     <div class="card field">
       <div class="field-label"><b>Boost</b><span>${boostL(cfg.boost)??'nessuno'}${cfg.boost2? ' + '+boostL(cfg.boost2):''}</span></div>
@@ -623,6 +634,13 @@ function renderHome(){
   </div>`;
 }
 function setCfg(k,v){ cfg[k]=v; store.set('cfg',cfg); renderHome(); }
+/* gli slider aggiornano solo l'etichetta: ridisegnare la vista
+   durante il trascinamento distrugge lo slider sotto il dito */
+function setSlider(k,v){
+  cfg[k]=v; store.set('cfg',cfg);
+  if(k==='lvl') $('lvl-label').textContent=LEVELS[v-1];
+  if(k==='min') $('min-label').textContent=v+' min';
+}
 function setDisc(d){ cfg.disc=d; cfg.style=Object.keys(STYLES[d])[0]; store.set('cfg',cfg); renderHome(); }
 function setBoost(id){
   if(id===null){ cfg.boost=null; cfg.boost2=null; }
