@@ -1,5 +1,11 @@
 <title>Giovi Yoga — La tua pratica, sempre nuova</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0D1518">
+<link rel="apple-touch-icon" href="icona-180.png">
+<link rel="icon" type="image/png" href="icona-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root{
     --bg:#F2F5F1; --bg2:#E7EDE7; --card:#FFFFFF; --ink:#1E2C28; --muted:#5C6E68;
@@ -104,6 +110,23 @@
   .p-opts button{font-size:12.5px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:6px 13px}
   .p-opts button.on{color:var(--accent); border-color:var(--accent); background:var(--accent-soft)}
 
+  /* ─ Anteprima ─ */
+  #preview{position:fixed; inset:0; z-index:15; background:linear-gradient(170deg, var(--bg2), var(--bg) 45%); display:none; flex-direction:column; max-width:520px; margin:0 auto; padding:calc(14px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom))}
+  #preview.open{display:flex}
+  .pv-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+  .pv-head button{padding:8px; color:var(--muted)}
+  .pv-title h2{font-size:24px}
+  .pv-title span{color:var(--muted); font-size:13px}
+  .pv-list{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px 0 10px}
+  .pv-row{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:7px 12px}
+  .pv-fig{width:64px; flex:0 0 64px; color:var(--accent)}
+  .pv-info{flex:1; min-width:0; font-size:14px}
+  .pv-info small{display:block; color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
+  .pv-dur{color:var(--sand); font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .pv-actions{display:flex; gap:10px; padding-top:10px}
+  .pv-actions .ghost{flex:1; padding:15px; border-radius:999px; border:1px solid var(--accent); color:var(--accent); font-size:15px; font-weight:600}
+  .pv-actions .start{flex:1.4; padding:15px}
+
   /* ─ Done ─ */
   .done{position:fixed; inset:0; z-index:30; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:30px; max-width:520px; margin:0 auto}
   .done.open{display:flex}
@@ -154,6 +177,22 @@
   <button id="tab-prog" onclick="go('prog')">
     <svg viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Progressi</button>
 </nav>
+
+<div id="preview">
+  <div class="pv-head">
+    <div class="pv-title">
+      <div class="eyebrow">La tua pratica di oggi</div>
+      <h2 id="pv-count"></h2>
+      <span>Non ti convince? Rigenerala: sarà diversa.</span>
+    </div>
+    <button onclick="closePreview()" aria-label="Chiudi anteprima"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="pv-list" id="pv-list"></div>
+  <div class="pv-actions">
+    <button class="ghost" onclick="regenPreview()">↻ Rigenera</button>
+    <button class="start" onclick="beginPractice()">Inizia</button>
+  </div>
+</div>
 
 <div id="player">
   <div class="p-top">
@@ -485,9 +524,33 @@ let seq=[], idx=0, left=0, elapsed=0, totalDur=0, timer=null, paused=false, wake
 const CIRC=2*Math.PI*55;
 const $=id=>document.getElementById(id);
 
-function startPractice(){
+/* anteprima: mostra la sequenza generata prima di partire */
+let pendingSeq=null;
+function openPreview(){
+  pendingSeq=generate();
+  renderPreview();
+  $('preview').classList.add('open');
+}
+function regenPreview(){ pendingSeq=generate(); renderPreview(); }
+function closePreview(){ $('preview').classList.remove('open'); }
+function renderPreview(){
+  const tot=Math.round(pendingSeq.reduce((s,x)=>s+x.dur,0)/60);
+  $('pv-count').textContent=`${pendingSeq.length} posizioni · ${tot} min`;
+  $('pv-list').innerHTML=pendingSeq.map(s=>`
+    <div class="pv-row">
+      <div class="pv-fig">${fig(s.p)}</div>
+      <div class="pv-info"><small>${s.fase}</small>${s.p.nome}${s.side?` — ${s.side}`:''}</div>
+      <div class="pv-dur">${s.dur}s</div>
+    </div>`).join('');
+}
+function beginPractice(){
+  closePreview();
+  startPractice(pendingSeq);
+}
+
+function startPractice(s){
   if(timer){ clearInterval(timer); timer=null; }
-  seq=generate(); idx=0; elapsed=0; paused=false;
+  seq=s||generate(); idx=0; elapsed=0; paused=false;
   totalDur=seq.reduce((s,x)=>s+x.dur,0);
   $('player').classList.add('open');
   $('ringP').style.strokeDasharray=CIRC;
@@ -629,8 +692,8 @@ function renderHome(){
       <div class="field-label"><b>Boost</b><span>${boostL(cfg.boost)??'nessuno'}${cfg.boost2? ' + '+boostL(cfg.boost2):''}</span></div>
       <div class="chips">${chip('Nessuno',!cfg.boost,`setBoost(null)`)}${AREAS.map(a=>chip(a.l, cfg.boost===a.id||cfg.boost2===a.id, `setBoost('${a.id}')`)).join('')}</div>
     </div>
-    <button class="start" onclick="startPractice()">Inizia la pratica</button>
-    <p class="hint">Le pose che segni come "non piaciute" non appariranno mai.</p>
+    <button class="start" onclick="openPreview()">Crea la pratica</button>
+    <p class="hint">Vedrai l'anteprima della sequenza: potrai rigenerarla prima di iniziare.</p>
   </div>`;
 }
 function setCfg(k,v){ cfg[k]=v; store.set('cfg',cfg); renderHome(); }
@@ -738,7 +801,47 @@ function renderProg(){
     <div class="card" style="padding:6px 2px">
       ${recent.map(h=>`<div class="hist"><b>${h.style} · ${h.min} min</b><span>${fmtDate(h.d)}</span></div>`).join('') || '<p class="empty-note">Completa la prima pratica per iniziare il tuo percorso.</p>'}
     </div>
+    <div class="card field">
+      <div class="field-label"><b>I tuoi dati</b><span id="backup-msg"></span></div>
+      <p style="font-size:13px;color:var(--muted)">Streak, cronologia e pose piaciute vivono solo su questo dispositivo. Salvali in un file per portarli su un altro telefono.</p>
+      <div class="pv-actions" style="padding-top:4px">
+        <button class="ghost" onclick="exportData()">Esporta dati</button>
+        <button class="ghost" onclick="$('import-file').click()">Importa dati</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(this.files[0]);this.value=''">
+    </div>
   </div>`;
+}
+function exportData(){
+  const data={app:'giovi-yoga', v:1, esportato:dstr(new Date()), votes, hist, cfg, prefs};
+  const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='giovi-yoga-backup-'+dstr(new Date())+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  const m=$('backup-msg'); if(m) m.textContent='file salvato ✓';
+}
+function importData(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const m=$('backup-msg');
+    try{
+      const d=JSON.parse(r.result);
+      if(d.app!=='giovi-yoga') throw new Error('non è un backup di Giovi Yoga');
+      votes=d.votes&&typeof d.votes==='object'? d.votes : {};
+      hist=Array.isArray(d.hist)? d.hist.filter(h=>h&&h.d&&h.min) : [];
+      cfg=Object.assign(cfg, d.cfg||{});
+      if(!STYLES[cfg.disc]) cfg.disc='yoga';
+      if(!STYLES[cfg.disc][cfg.style]) cfg.style=Object.keys(STYLES[cfg.disc])[0];
+      prefs=Object.assign(prefs, d.prefs||{});
+      store.set('votes',votes); store.set('hist',hist); store.set('cfg',cfg); store.set('prefs',prefs);
+      renderProg();
+      const m2=$('backup-msg'); if(m2) m2.textContent='dati importati ✓';
+    }catch(e){ if(m) m.textContent='file non valido'; }
+  };
+  r.readAsText(file);
 }
 function fmtDate(s){
   const [y,m,d]=s.split('-');
@@ -747,5 +850,9 @@ function fmtDate(s){
 
 /* precarica voci TTS su iOS */
 try{ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>{} }catch(e){}
+/* PWA: offline e installazione (fallisce in silenzio dove non supportato) */
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
 go('home');
 </script>

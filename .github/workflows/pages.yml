@@ -27,6 +27,7 @@ jobs:
         run: |
           mkdir -p _site
           { printf '<!doctype html>\n<meta charset="utf-8">\n'; cat yoga-app/index.html; } > _site/index.html
+          cp yoga-app/manifest.webmanifest yoga-app/sw.js yoga-app/icona-*.png _site/
           touch _site/.nojekyll
 
       # Il token di Actions non può attivare Pages via API su questo repo,
